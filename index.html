@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Project Plan: 3D City Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <!-- Visualization & Content Choices:
+        - Project Overview: Text blocks. Goal: Inform. Method: HTML. Interaction: Read.
+        - File Structures: Collapsible trees. Goal: Organize/Inform. Method: HTML/CSS/JS. Interaction: Click to expand/collapse. Justification: Space-efficient, interactive.
+        - Tech Stacks: Clickable lists. Goal: Inform. Method: HTML/JS. Interaction: Click for details. Justification: Drill-down.
+        - APIs: Formatted code blocks. Goal: Inform. Method: HTML. Interaction: Read.
+        - DB Schemas: Structured text/tables. Goal: Organize/Inform. Method: HTML. Interaction: Read.
+        - Implementation Plan: Card-based phases. Goal: Inform/Organize. Method: HTML/CSS/JS. Interaction: Click to expand phase details. ✨ Gemini API for task elaboration. Justification: Digestible overview of a long plan with on-demand AI insights.
+        - Charts: A bar chart to visualize the number of main tasks per phase in the Implementation Plan. Goal: Compare. Method: Chart.js/Canvas. Interaction: Hover for tooltips. Justification: Provides a quick quantitative overview of phase efforts.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            border-color: #fbbf24; /* amber-400 */
+            color: #0f172a; /* slate-900 */
+            background-color: #fef3c7; /* amber-100 */
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .file-tree ul {
+            padding-left: 1.5rem;
+            border-left: 1px solid #e5e7eb; /* gray-200 */
+        }
+        .file-tree li {
+            margin-bottom: 0.25rem;
+        }
+        .file-tree .folder > span {
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .file-tree .file {
+            color: #475569; /* slate-600 */
+        }
+        .file-tree .folder > span::before {
+            content: '📁 ';
+            margin-right: 0.25rem;
+        }
+        .file-tree .file::before {
+            content: '📄 ';
+            margin-right: 0.25rem;
+        }
+        .file-tree .folder.collapsed > ul {
+            display: none;
+        }
+        .file-tree .folder:not(.collapsed) > span::before {
+            content: '📂 ';
+        }
+        .code-block {
+            background-color: #1e293b; /* slate-800 */
+            color: #e2e8f0; /* slate-200 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.875rem;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px; 
+            max-height: 450px;
+        }
+        @media (min-width: 768px) { /* md breakpoint */
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .tech-item {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .tech-item:hover {
+            background-color: #fef9c3; /* amber-50 */
+        }
+        .tech-details {
+            display: none;
+            border-left: 3px solid #fbbf24; /* amber-400 */
+        }
+        .gemini-elaborate-btn {
+            background-color: #38bdf8; /* sky-400 */
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        .gemini-elaborate-btn:hover {
+            background-color: #0ea5e9; /* sky-500 */
+        }
+        .gemini-response {
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background-color: #f0f9ff; /* sky-50 */
+            border-left: 3px solid #38bdf8; /* sky-400 */
+            border-radius: 0.25rem;
+            font-size: 0.9rem;
+            color: #0c4a6e; /* sky-800 */
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(0,0,0,.1);
+            border-radius: 50%;
+            border-top-color: #38bdf8; /* sky-400 */
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 0.5rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-slate-800 min-h-screen p-4 md:p-8">
+
+    <div class="container mx-auto max-w-6xl bg-white shadow-xl rounded-lg p-6 md:p-10">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-sky-700">3D Procedural City Generator with AI Lore</h1>
+            <p class="text-lg text-slate-600 mt-2">An Interactive Exploration of the Project Plan</p>
+        </header>
+
+        <nav class="mb-8">
+            <ul class="flex flex-wrap border-b-2 border-stone-300">
+                <li><button class="tab-button active text-slate-600 hover:bg-amber-50 font-medium py-3 px-6 border-b-4 border-transparent" data-tab="overview">Project Overview</button></li>
+                <li><button class="tab-button text-slate-600 hover:bg-amber-50 font-medium py-3 px-6 border-b-4 border-transparent" data-tab="webApp">Web Application</button></li>
+                <li><button class="tab-button text-slate-600 hover:bg-amber-50 font-medium py-3 px-6 border-b-4 border-transparent" data-tab="swiftUiApp">SwiftUI App</button></li>
+                <li><button class="tab-button text-slate-600 hover:bg-amber-50 font-medium py-3 px-6 border-b-4 border-transparent" data-tab="implementationPlan">Implementation Plan</button></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="overview" class="tab-content active">
+                <h2 class="text-3xl font-semibold text-sky-600 mb-6">Project Overview</h2>
+                <p class="mb-4 text-slate-700 leading-relaxed">
+                    This project aims to develop a 3D procedural city generator that leverages AI to create rich, dynamic lore for an explorable environment. The initial implementation will be a web application using Three.js for rendering, Perlin noise for procedural generation, and a GPT-based API for AI lore. Future plans include porting the application to a native SwiftUI app for Apple platforms.
+                </p>
+                <p class="mb-4 text-slate-700 leading-relaxed">
+                    Key features include procedurally generated city layouts, buildings, NPCs, and districts, all imbued with unique names, stories, and events generated by AI. The application will also feature a day/night cycle, a "flycam" mode for exploration, a client-side lore database, and the ability to export the generated map data as a JSON file.
+                </p>
+                <div class="mt-6 p-4 bg-amber-50 border-l-4 border-amber-400 rounded">
+                    <h3 class="text-xl font-semibold text-amber-700 mb-2">Core Technologies at a Glance:</h3>
+                    <ul class="list-disc list-inside text-slate-700 space-y-1">
+                        <li>**Web App:** Three.js, JavaScript, Perlin Noise, GPT API (via proxy), HTML, CSS (Tailwind)</li>
+                        <li>**SwiftUI App:** Swift, SceneKit/RealityKit, Perlin Noise (Swift port), GPT API, SwiftUI</li>
+                    </ul>
+                </div>
+                 <p class="mt-6 text-slate-700 leading-relaxed">
+                    This interactive plan allows you to delve into the specifics of each development stage, including file structures, API designs, database considerations, and the phased implementation strategy. Use the tabs above to navigate through the different aspects of the project.
+                </p>
+            </section>
+
+            <section id="webApp" class="tab-content">
+                <h2 class="text-3xl font-semibold text-sky-600 mb-6">Web Application Details (Three.js + GPT + Perlin Noise)</h2>
+                <p class="mb-6 text-slate-700 leading-relaxed">
+                    The initial version of the 3D Procedural City Generator will be a browser-based application. This section details its proposed file structure, core technology integrations, API designs, and data management strategies. The emphasis is on creating a modular and maintainable codebase.
+                </p>
+
+                <div class="mb-8 p-4 border border-stone-200 rounded-lg bg-stone-50">
+                    <h3 class="text-2xl font-medium text-sky-700 mb-4">File Structure (VS Code Project)</h3>
+                    <p class="mb-3 text-sm text-slate-600">Click on folders to expand/collapse. This structure promotes modularity and separation of concerns.</p>
+                    <div class="file-tree bg-white p-4 rounded border border-stone-200 shadow-sm text-sm">
+                        <ul>
+                            <li class="folder collapsed">
+                                <span>/procedural-city-generator</span>
+                                <ul>
+                                    <li class="folder collapsed">
+                                        <span>/public</span>
+                                        <ul>
+                                            <li class="file">index.html</li>
+                                            <li class="file">style.css</li>
+                                            <li class="folder collapsed">
+                                                <span>/assets</span>
+                                                <ul>
+                                                    <li class="folder collapsed"><span>/textures</span>
+                                                        <ul>
+                                                            <li class="folder collapsed"><span>/buildings</span></li>
+                                                            <li class="folder collapsed"><span>/environment</span></li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="folder collapsed"><span>/models</span></li>
+                                                    <li class="folder collapsed"><span>/fonts</span></li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="folder collapsed">
+                                        <span>/src</span>
+                                        <ul>
+                                            <li class="file">main.js</li>
+                                            <li class="folder collapsed"><span>/core</span>
+                                                <ul>
+                                                    <li class="file">SceneManager.js</li>
+                                                    <li class="file">Loop.js</li>
+                                                    <li class="file">Resizer.js</li>
+                                                    <li class="file">AssetLoader.js</li>
+                                                </ul>
+                                            </li>
+                                            <li class="folder collapsed"><span>/generation</span>
+                                                <ul>
+                                                    <li class="file">CityGenerator.js</li>
+                                                    <li class="file">DistrictGenerator.js</li>
+                                                    <li class="file">BuildingGenerator.js</li>
+                                                    <li class="file">Perlin.js</li>
+                                                </ul>
+                                            </li>
+                                            <li class="folder collapsed"><span>/world</span>
+                                                <ul>
+                                                    <li class="file">DayNightCycle.js</li>
+                                                    <li class="file">NPCManager.js</li>
+                                                    <li class="file">Environment.js</li>
+                                                </ul>
+                                            </li>
+                                            <li class="folder collapsed"><span>/ai</span>
+                                                <ul>
+                                                    <li class="file">LoreGenerator.js</li>
+                                                    <li class="file">LoreDatabase.js</li>
+                                                </ul>
+                                            </li>
+                                            <li class="folder collapsed"><span>/controls</span>
+                                                <ul>
+                                                    <li class="file">FlyControlsHandler.js</li>
+                                                </ul>
+                                            </li>
+                                            <li class="folder collapsed"><span>/ui</span>
+                                                <ul>
+                                                    <li class="file">UIManager.js</li>
+                                                    <li class="folder collapsed"><span>/components</span></li>
+                                                </ul>
+                                            </li>
+                                            <li class="folder collapsed"><span>/utils</span>
+                                                <ul>
+                                                    <li class="file">mathUtils.js</li>
+                                                    <li class="file">stringUtils.js</li>
+                                                    <li class="file">constants.js</li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="folder collapsed">
+                                        <span>/server</span>
+                                        <ul>
+                                            <li class="file">gpt-proxy.js</li>
+                                        </ul>
+                                    </li>
+                                    <li class="file">package.json</li>
+                                    <li class="file">webpack.config.js</li>
+                                    <li class="file">README.md</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mb-8 p-4 border border-stone-200 rounded-lg bg-stone-50">
+                    <h3 class="text-2xl font-medium text-sky-700 mb-4">Core Technologies & Implementation Notes</h3>
+                     <p class="mb-3 text-sm text-slate-600">Key technologies and their roles in the web application. Click items for more details.</p>
+                    <ul class="space-y-3">
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">Three.js:</strong> For all 3D rendering tasks.
+                            <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Includes scene setup, lighting (Directional, Ambient, Hemisphere), shadow mapping, geometry creation (BoxGeometry, PlaneGeometry), PBR materials (MeshStandardMaterial), texture loading, and performance optimizations (Instancing, LOD, geometry merging, resource disposal).
+                            </div>
+                        </li>
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">Perlin Noise:</strong> For procedural generation.
+                             <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Used for city layout (land/water, elevation, density maps, district boundaries/types) and building variations (height, footprint, style). Seedable for reproducibility.
+                            </div>
+                        </li>
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">GPT API Integration:</strong> For AI-driven lore generation.
+                             <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                **Critical: API key security via a backend proxy (Node.js/Express).** Client-side `fetch` calls to the proxy. Focus on prompt engineering for names, descriptions, backstories, and events. Caching in `LoreDatabase.js` to manage API usage and costs.
+                            </div>
+                        </li>
+                         <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">Day/Night Cycle:</strong> To enhance immersion.
+                             <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Simulates time progression, animates sun/moon light position and color, updates skybox/skydome, adjusts ambient lighting, and includes a particle system for stars.
+                            </div>
+                        </li>
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">Flycam Mode:</strong> For user exploration.
+                             <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Utilizes `THREE.FlyControls` for free camera movement, configured for appropriate speed and responsiveness.
+                            </div>
+                        </li>
+                         <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">Lore Database (Client-Side):</strong> For managing generated content.
+                             <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Initially JavaScript objects/maps. `IndexedDB` considered for persistence across sessions. Caches lore to reduce API calls.
+                            </div>
+                        </li>
+                         <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">Exportable Map JSON:</strong> For saving and sharing city data.
+                             <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Serializes city state (seed, districts, buildings, NPCs, events, and associated lore) into a downloadable JSON file.
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="mb-8 p-4 border border-stone-200 rounded-lg bg-stone-50">
+                    <h3 class="text-2xl font-medium text-sky-700 mb-4">APIs</h3>
+                    <div class="mb-6">
+                        <h4 class="text-xl font-medium text-slate-700 mb-2">1. Internal JavaScript "APIs" (Module Exports/Class Methods)</h4>
+                        <p class="text-sm text-slate-600 mb-3">These define how different parts of the client-side application interact.</p>
+                        <ul class="list-disc list-inside text-slate-700 space-y-1 pl-2">
+                            <li>`CityGenerator.generate(seed)`: Returns city structure data.</li>
+                            <li>`BuildingGenerator.createBuilding(config)`: Returns `THREE.Mesh`.</li>
+                            <li>`LoreGenerator.fetchLore(entityType, entityId, promptContext)`: Returns `Promise<loreText>`.</li>
+                            <li>`LoreDatabase.getLore(entityId)` / `LoreDatabase.saveLore(entityId, loreData)`.</li>
+                            <li>`DayNightCycle.update(time)`: Updates lighting and sky.</li>
+                            <li>`UIManager.displayLore(title, content)`.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-medium text-slate-700 mb-2">2. Backend GPT Proxy API (`/server/gpt-proxy.js`)</h4>
+                        <p class="text-sm text-slate-600 mb-3">This server-side component is crucial for securely handling the OpenAI API key.</p>
+                        <p class="mb-1"><strong class="font-medium">Endpoint:</strong> `POST /api/generate-lore`</p>
+                        <p class="mb-2"><strong class="font-medium">Request Body (from client to proxy):</strong></p>
+                        <pre class="code-block mb-2"><code>{
+  "prompt": "Generate a name for a cyberpunk district.",
+  "max_tokens": 30,
+  "temperature": 0.8
+}</code></pre>
+                        <p class="mb-2"><strong class="font-medium">Server-Side Logic:</strong></p>
+                        <ol class="list-decimal list-inside text-slate-700 space-y-1 pl-2 mb-2">
+                            <li>Receives request from the client.</li>
+                            <li>Constructs the full request for OpenAI, adding the `Authorization: Bearer YOUR_OPENAI_API_KEY` header (key stored securely on server).</li>
+                            <li>Sends request to OpenAI.</li>
+                            <li>Receives response from OpenAI.</li>
+                            <li>Forwards the relevant part of the OpenAI response (the generated text) back to the client.</li>
+                        </ol>
+                        <p class="mb-1"><strong class="font-medium">Response Body (from proxy to client):</strong></p>
+                        <pre class="code-block"><code>{
+  "generated_text": "Neon Razor's Edge"
+}
+// Or an error structure:
+{
+  "error": "API request failed"
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="p-4 border border-stone-200 rounded-lg bg-stone-50">
+                    <h3 class="text-2xl font-medium text-sky-700 mb-4">Database Schemas (Conceptual)</h3>
+                    <p class="mb-4 text-sm text-slate-600">These schemas outline the structure for the client-side lore database and the exported JSON map data. They define how information about the city, districts, buildings, NPCs, and events is organized.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-lg font-medium text-slate-700 mb-1">CityInfo (Singleton)</h4>
+                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                <li>`cityName`: Text (GPT-generated)</li>
+                                <li>`citySeed`: String/Number</li>
+                                <li>`cityTheme`: Text (e.g., 'cyberpunk')</li>
+                                <li>`globalEvents`: Array of event objects</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-medium text-slate-700 mb-1">Districts Collection</h4>
+                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                <li>`districtId`: String</li>
+                                <li>`name`: Text (GPT-generated)</li>
+                                <li>`type`: String (e.g., 'commercial')</li>
+                                <li>`descriptionLore`: Text (GPT-generated)</li>
+                                <li>`boundaries`: Object (min/max coordinates)</li>
+                                <li>`ambientEvents`: Array of event objects</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-medium text-slate-700 mb-1">Buildings Collection</h4>
+                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                <li>`buildingId`: String</li>
+                                <li>`districtId`: String (FK)</li>
+                                <li>`type`: String (e.g., 'skyscraper')</li>
+                                <li>`name`: Text (GPT-generated, notable)</li>
+                                <li>`descriptionLore`: Text (GPT-generated)</li>
+                                <li>`position`: Object {x, y, z}</li>
+                                <li>`dimensions`: Object {w, h, d}</li>
+                                <li>`textureSet`: String</li>
+                                <li>`inhabitants`: Array of npcId (optional)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-medium text-slate-700 mb-1">NPCs Collection</h4>
+                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                <li>`npcId`: String</li>
+                                <li>`name`: Text (GPT-generated)</li>
+                                <li>`role`: String (e.g., 'merchant')</li>
+                                <li>`backstoryLore`: Text (GPT-generated)</li>
+                                <li>`currentDistrictId`: String (FK)</li>
+                                <li>`currentPosition`: Object {x, y, z}</li>
+                                <li>`dialogueSeed`: Text (for GPT dialogue)</li>
+                                <li>`visualStyle`: String</li>
+                            </ul>
+                        </div>
+                        <div class="md:col-span-2">
+                            <h4 class="text-lg font-medium text-slate-700 mb-1">Events Collection</h4>
+                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                <li>`eventId`: String</li>
+                                <li>`title`: Text (GPT-generated)</li>
+                                <li>`fullDescriptionLore`: Text (GPT-generated)</li>
+                                <li>`type`: String (e.g., 'mystery')</li>
+                                <li>`locationContext`: String</li>
+                                <li>`relatedEntities`: Array of objects {type, id}</li>
+                                <li>`status`: String (e.g., 'unfolding')</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <section id="swiftUiApp" class="tab-content">
+                <h2 class="text-3xl font-semibold text-sky-600 mb-6">SwiftUI App Details (Future Implementation)</h2>
+                <p class="mb-6 text-slate-700 leading-relaxed">
+                    This section outlines considerations for porting the 3D Procedural City Generator to a native SwiftUI application for Apple platforms. This involves a significant rewrite, particularly for rendering and UI, to leverage native frameworks and capabilities.
+                </p>
+
+                <div class="mb-8 p-4 border border-stone-200 rounded-lg bg-stone-50">
+                    <h3 class="text-2xl font-medium text-sky-700 mb-4">Key Considerations for Swift UI Port</h3>
+                     <p class="mb-3 text-sm text-slate-600">Critical aspects to address when transitioning from the web application to a native Swift environment. Click items for more details.</p>
+                    <ul class="space-y-3">
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">3D Rendering Engine:</strong>
+                            <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Options include SceneKit (mature, general 3D), RealityKit (modern, AR-focused but capable for 3D, good Swift UI integration), or Metal (low-level, max performance/control). Embedding WKWebView is a quick but non-native alternative.
+                            </div>
+                        </li>
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">Procedural Generation Logic:</strong>
+                            <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Perlin noise, city layout, and building generation algorithms need to be rewritten in Swift. The core mathematical logic remains the same.
+                            </div>
+                        </li>
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">AI Lore Generation (GPT API):</strong>
+                            <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Use Swift's `URLSession` for network requests to the GPT proxy. Parse JSON responses with `Codable`. Secure API keys using the iOS/macOS Keychain.
+                            </div>
+                        </li>
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">UI:</strong>
+                            <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Rebuild all UI elements (menus, lore display, controls) natively using Swift UI views.
+                            </div>
+                        </li>
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">Controls:</strong>
+                            <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Implement touch gestures for iOS (pan, pinch-to-zoom, rotate) and keyboard/mouse/trackpad input for macOS. Consider Game Controller framework support.
+                            </div>
+                        </li>
+                        <li class="tech-item p-3 rounded border border-stone-200 hover:shadow-md">
+                            <strong class="text-sky-800">Data Storage:</strong>
+                            <div class="tech-details mt-2 p-3 text-sm bg-white rounded">
+                                Options include SwiftData (modern, Swift-native), Core Data (powerful, established), or saving/loading JSON to the file system. CloudKit for cross-device sync is an advanced option.
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="mb-8 p-4 border border-stone-200 rounded-lg bg-stone-50">
+                    <h3 class="text-2xl font-medium text-sky-700 mb-4">Potential File Structure (Xcode Project)</h3>
+                    <p class="mb-3 text-sm text-slate-600">A conceptual file organization for the SwiftUI application, emphasizing an MVVM (Model-View-ViewModel) or similar modern architectural pattern.</p>
+                     <div class="file-tree bg-white p-4 rounded border border-stone-200 shadow-sm text-sm">
+                        <ul>
+                            <li class="folder collapsed">
+                                <span>/YourCityAppName</span>
+                                <ul>
+                                    <li class="file">YourCityAppNameApp.swift</li>
+                                    <li class="folder collapsed"><span>/Views</span>
+                                        <ul>
+                                            <li class="file">ContentView.swift</li>
+                                            <li class="file">SceneViewRepresentable.swift</li>
+                                            <li class="file">LoreDisplayView.swift</li>
+                                            <li class="file">SettingsView.swift</li>
+                                            <li class="folder collapsed"><span>/Components</span></li>
+                                        </ul>
+                                    </li>
+                                    <li class="folder collapsed"><span>/ViewModels</span>
+                                        <ul>
+                                            <li class="file">CityViewModel.swift</li>
+                                            <li class="file">LoreViewModel.swift</li>
+                                            <li class="file">SettingsViewModel.swift</li>
+                                        </ul>
+                                    </li>
+                                    <li class="folder collapsed"><span>/Models</span>
+                                        <ul>
+                                            <li class="file">City.swift</li>
+                                            <li class="file">District.swift</li>
+                                            <li class="file">Building.swift</li>
+                                            <li class="file">NPC.swift</li>
+                                            <li class="file">Event.swift</li>
+                                            <li class="file">PerlinNoise.swift</li>
+                                        </ul>
+                                    </li>
+                                    <li class="folder collapsed"><span>/Services</span>
+                                        <ul>
+                                            <li class="file">SceneKitEngine.swift (or RealityKitEngine.swift)</li>
+                                            <li class="file">CityGenerationService.swift</li>
+                                            <li class="file">LoreAPIService.swift</li>
+                                            <li class="file">PersistenceService.swift</li>
+                                            <li class="file">DayNightCycleService.swift</li>
+                                        </ul>
+                                    </li>
+                                    <li class="folder collapsed"><span>/Utils</span>
+                                        <ul>
+                                            <li class="file">MathExtensions.swift</li>
+                                            <li class="file">Constants.swift</li>
+                                        </ul>
+                                    </li>
+                                    <li class="file">Assets.xcassets</li>
+                                    <li class="file">Info.plist</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mb-8 p-4 border border-stone-200 rounded-lg bg-stone-50">
+                    <h3 class="text-2xl font-medium text-sky-700 mb-4">APIs (SwiftUI)</h3>
+                     <div class="mb-6">
+                        <h4 class="text-xl font-medium text-slate-700 mb-2">1. Internal Swift APIs</h4>
+                        <p class="text-sm text-slate-600 mb-3">Defined by Swift protocols, class methods, Combine publishers, or async/await functions for modular communication.</p>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-medium text-slate-700 mb-2">2. External GPT Proxy API (via `URLSession`)</h4>
+                        <p class="text-sm text-slate-600 mb-3">Example structure for making API calls from Swift.</p>
+                        <pre class="code-block"><code>// Simplified example in LoreAPIService.swift
+import Foundation
+
+struct GPTRequest: Codable {
+    let prompt: String
+    let max_tokens: Int
+    let temperature: Double
+}
+
+struct GPTResponse: Codable {
+    let generated_text: String?
+    let error: String?
+}
+
+class LoreAPIService {
+    private let proxyURL = URL(string: "YOUR_PROXY_SERVER_URL/api/generate-lore")!
+
+    func fetchLore(prompt: String, ...) async throws -> String {
+        var request = URLRequest(url: proxyURL)
+        request.httpMethod = "POST"
+        // ... (add headers, body using GPTRequest)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        // ... (handle response, decode GPTResponse)
+        // ... (return generated_text or throw error)
+        return "Generated lore text" // Placeholder
+    }
+}</code></pre>
+                    </div>
+                </div>
+                
+                <div class="p-4 border border-stone-200 rounded-lg bg-stone-50">
+                    <h3 class="text-2xl font-medium text-sky-700 mb-4">Database Schemas (SwiftData Example)</h3>
+                    <p class="mb-3 text-sm text-slate-600">Conceptual `@Model` classes for use with SwiftData, Apple's modern persistence framework.</p>
+                    <pre class="code-block"><code>import SwiftData
+
+@Model
+final class CityInfoSchema {
+    @Attribute(.unique) var id: UUID
+    var cityName: String
+    var citySeed: String
+    // ... other properties ...
+    // @Relationship var districts: [DistrictSchema]?
+    init(...) { /* ... */ }
+}
+
+@Model
+final class DistrictSchema {
+    @Attribute(.unique) var districtId: String
+    var name: String
+    // ... other properties ...
+    // var city: CityInfoSchema?
+    // @Relationship var buildings: [BuildingSchema]?
+    init(...) { /* ... */ }
+}
+
+// Similar @Model classes for BuildingSchema, NPCSchema, EventSchema
+// with appropriate attributes and relationships.</code></pre>
+                </div>
+            </section>
+
+            <section id="implementationPlan" class="tab-content">
+                <h2 class="text-3xl font-semibold text-sky-600 mb-6">Phased Implementation Plan</h2>
+                <p class="mb-6 text-slate-700 leading-relaxed">
+                    The project will be developed in phases to manage complexity and allow for iterative progress. This section outlines the key stages for both the web application and the subsequent SwiftUI port. Each phase has a clear goal and set of tasks.
+                </p>
+
+                <div class="mb-8">
+                    <h3 class="text-2xl font-medium text-sky-700 mb-4">Task Distribution Overview</h3>
+                    <p class="mb-3 text-sm text-slate-600">A visual representation of the number of primary tasks planned for each major development phase. This helps in understanding the effort distribution across the project lifecycle.</p>
+                    <div class="chart-container bg-stone-50 p-4 rounded-lg border border-stone-200 shadow-sm">
+                        <canvas id="implementationPhaseChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-8 implementation-phases-container">
+                    <div class="phase-card p-4 rounded-lg border border-amber-300 bg-amber-50">
+                        <h3 class="text-xl font-medium text-amber-700 mb-2">Web App: Phase 1 - Core Foundation (MVP)</h3>
+                        <p class="text-sm text-slate-500 mb-3 italic">Goal: A navigable 3D space with procedurally placed blocks and one piece of AI-generated text.</p>
+                        <ul class="list-decimal list-inside text-slate-700 space-y-1 pl-2">
+                            <li>Basic Three.js scene setup (renderer, camera, lights).<button class="gemini-elaborate-btn" data-task-index="0">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Implement FlyControls.<button class="gemini-elaborate-btn" data-task-index="1">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Integrate/implement Perlin noise.<button class="gemini-elaborate-btn" data-task-index="2">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Basic city generation: flat grid, cube buildings (height variation only), no textures.<button class="gemini-elaborate-btn" data-task-index="3">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Simple day/night cycle (sun movement, basic sky color change).<button class="gemini-elaborate-btn" data-task-index="4">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Set up Node.js/Express proxy for GPT API calls; test it.<button class="gemini-elaborate-btn" data-task-index="5">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Basic Lore: Generate city name and one district name via proxy; display as HTML text.<button class="gemini-elaborate-btn" data-task-index="6">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                        </ul>
+                    </div>
+
+                    <div class="phase-card p-4 rounded-lg border border-amber-300 bg-amber-50">
+                        <h3 class="text-xl font-medium text-amber-700 mb-2">Web App: Phase 2 - Enhancing Generation & Lore</h3>
+                        <p class="text-sm text-slate-500 mb-3 italic">Goal: A more visually diverse city with distinct areas and more integrated lore.</p>
+                        <ul class="list-decimal list-inside text-slate-700 space-y-1 pl-2">
+                            <li>Advanced building generation (varied footprints, more detail).<button class="gemini-elaborate-btn" data-task-index="7">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Basic texturing for buildings and ground.<button class="gemini-elaborate-btn" data-task-index="8">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Implement district logic (types based on Perlin noise, varied styles/density).<button class="gemini-elaborate-btn" data-task-index="9">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Expanded Lore: Generate descriptions for districts and notable buildings.<button class="gemini-elaborate-btn" data-task-index="10">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>NPCs (Visuals Only): Place placeholder meshes, generate NPC names.<button class="gemini-elaborate-btn" data-task-index="11">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Basic HTML overlay UI for contextual lore display.<button class="gemini-elaborate-btn" data-task-index="12">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Client-side JavaScript object-based caching for lore.<button class="gemini-elaborate-btn" data-task-index="13">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                        </ul>
+                    </div>
+
+                    <div class="phase-card p-4 rounded-lg border border-amber-300 bg-amber-50">
+                        <h3 class="text-xl font-medium text-amber-700 mb-2">Web App: Phase 3 - Features & Polish</h3>
+                        <p class="text-sm text-slate-500 mb-3 italic">Goal: A feature-complete web version that is interesting to explore and demonstrates all core mechanics.</p>
+                        <ul class="list-decimal list-inside text-slate-700 space-y-1 pl-2">
+                            <li>NPC Lore: Generate backstories for NPCs.<button class="gemini-elaborate-btn" data-task-index="14">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Events: Conceptualize and generate simple event descriptions.<button class="gemini-elaborate-btn" data-task-index="15">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Implement JSON export functionality for map data.<button class="gemini-elaborate-btn" data-task-index="16">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Profile and optimize Three.js performance.<button class="gemini-elaborate-btn" data-task-index="17">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Refinements: Improve lighting, add fog, basic skybox with stars.<button class="gemini-elaborate-btn" data-task-index="18">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>User testing and feedback incorporation.<button class="gemini-elaborate-btn" data-task-index="19">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                        </ul>
+                    </div>
+
+                    <hr class="my-8 border-stone-300">
+
+                    <div class="phase-card p-4 rounded-lg border border-sky-300 bg-sky-50">
+                        <h3 class="text-xl font-medium text-sky-700 mb-2">SwiftUI Port: Phase 4 - Core Rendering & Logic</h3>
+                        <p class="text-sm text-slate-500 mb-3 italic">Goal: A native app that can procedurally generate a basic city structure and fetch one piece of lore.</p>
+                        <ul class="list-decimal list-inside text-slate-700 space-y-1 pl-2">
+                            <li>Xcode project setup; choose 3D tech (SceneKit/RealityKit).<button class="gemini-elaborate-btn" data-task-index="20">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Render a basic 3D scene with simple camera controls.<button class="gemini-elaborate-btn" data-task-index="21">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Rewrite Perlin noise, city layout, and basic building generation in Swift.<button class="gemini-elaborate-btn" data-task-index="22">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Implement `LoreAPIService.swift` for GPT API calls (via proxy).<button class="gemini-elaborate-btn" data-task-index="23">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Define Swift `Codable` structs or initial SwiftData models.<button class="gemini-elaborate-btn" data-task-index="24">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                        </ul>
+                    </div>
+
+                    <div class="phase-card p-4 rounded-lg border border-sky-300 bg-sky-50">
+                        <h3 class="text-xl font-medium text-sky-700 mb-2">SwiftUI Port: Phase 5 - Feature Parity</h3>
+                        <p class="text-sm text-slate-500 mb-3 italic">Goal: Achieve feature parity with the polished web application, but as a native Swift UI app.</p>
+                        <ul class="list-decimal list-inside text-slate-700 space-y-1 pl-2">
+                            <li>Implement advanced building generation, texturing, and lighting in SceneKit/RealityKit.<button class="gemini-elaborate-btn" data-task-index="25">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Port the day/night cycle logic.<button class="gemini-elaborate-btn" data-task-index="26">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Build native Swift UI views for lore display, settings, etc.<button class="gemini-elaborate-btn" data-task-index="27">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Integrate SwiftData/Core Data for persistence.<button class="gemini-elaborate-btn" data-task-index="28">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Implement smooth camera navigation (gestures/mouse/keyboard).<button class="gemini-elaborate-btn" data-task-index="29">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Port NPC and event generation and display logic.<button class="gemini-elaborate-btn" data-task-index="30">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Implement native JSON export/import.<button class="gemini-elaborate-btn" data-task-index="31">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                        </ul>
+                    </div>
+
+                     <div class="phase-card p-4 rounded-lg border border-sky-300 bg-sky-50">
+                        <h3 class="text-xl font-medium text-sky-700 mb-2">SwiftUI Port: Phase 6 - Polish, Optimization & Launch Prep</h3>
+                        <p class="text-sm text-slate-500 mb-3 italic">Goal: A high-quality, releasable native application.</p>
+                        <ul class="list-decimal list-inside text-slate-700 space-y-1 pl-2">
+                            <li>Profile and optimize for iOS/macOS performance and battery life.<button class="gemini-elaborate-btn" data-task-index="32">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Leverage native platform features (Share Sheet, haptics).<button class="gemini-elaborate-btn" data-task-index="33">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Refine UI/UX for a polished native experience.<button class="gemini-elaborate-btn" data-task-index="34">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Rigorous testing on target devices; beta testing.<button class="gemini-elaborate-btn" data-task-index="35">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Prepare App Store assets (icons, screenshots, descriptions).<button class="gemini-elaborate-btn" data-task-index="36">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                            <li>Submit to the App Store.<button class="gemini-elaborate-btn" data-task-index="37">✨ Elaborate</button><div class="gemini-response hidden"></div></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="mt-12 pt-6 border-t border-stone-300 text-center">
+            <p class="text-sm text-slate-500">&copy; 2025 Interactive Project Plan Explorer. Content derived from the "3D Procedural City Generator with AI Lore" project plan.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Tabbed Navigation
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(button.dataset.tab).classList.add('active');
+            });
+        });
+
+        // File Tree Interaction
+        const folders = document.querySelectorAll('.file-tree .folder > span');
+        folders.forEach(folder => {
+            folder.addEventListener('click', () => {
+                folder.parentElement.classList.toggle('collapsed');
+            });
+        });
+        
+        // Tech Item Interaction
+        const techItems = document.querySelectorAll('.tech-item');
+        techItems.forEach(item => {
+            const details = item.querySelector('.tech-details');
+            if (details) {
+                item.addEventListener('click', (event) => {
+                    if (event.target.closest('.tech-details')) return;
+                    
+                    const isVisible = details.style.display === 'block';
+                    document.querySelectorAll('.tech-details').forEach(d => d.style.display = 'none');
+                    details.style.display = isVisible ? 'none' : 'block';
+                });
+            }
+        });
+
+        // Chart.js for Implementation Plan
+        const phaseData = {
+            labels: [
+                'Web App: Phase 1 (MVP)', 
+                'Web App: Phase 2 (Enhance)', 
+                'Web App: Phase 3 (Polish)',
+                'SwiftUI: Phase 4 (Core Port)',
+                'SwiftUI: Phase 5 (Feature Parity)',
+                'SwiftUI: Phase 6 (Launch Prep)'
+            ],
+            datasets: [{
+                label: 'Number of Primary Tasks',
+                data: [7, 7, 6, 5, 7, 6],
+                backgroundColor: [
+                    'rgba(251, 191, 36, 0.6)', 
+                    'rgba(250, 204, 21, 0.6)', 
+                    'rgba(245, 158, 11, 0.6)', 
+                    'rgba(56, 189, 248, 0.6)', 
+                    'rgba(14, 165, 233, 0.6)', 
+                    'rgba(2, 132, 199, 0.6)'   
+                ],
+                borderColor: [
+                    'rgba(217, 119, 6, 1)', 
+                    'rgba(217, 119, 6, 1)',
+                    'rgba(180, 83, 9, 1)',  
+                    'rgba(12, 74, 110, 1)', 
+                    'rgba(3, 105, 161, 1)', 
+                    'rgba(7, 89, 133, 1)'  
+                ],
+                borderWidth: 1
+            }]
+        };
+
+        const chartConfig = {
+            type: 'bar',
+            data: phaseData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Number of Tasks', font: { size: 14, family: 'Inter' }, color: '#334155' },
+                        ticks: { color: '#475569' },
+                        grid: { color: '#e2e8f0' }
+                    },
+                    x: {
+                         ticks: { color: '#475569', font: { size: 11, family: 'Inter' }, maxRotation: 45, minRotation: 30 },
+                         grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a', titleFont: { size: 14, family: 'Inter' },
+                        bodyFont: { size: 12, family: 'Inter' }, padding: 10, cornerRadius: 4, displayColors: false
+                    }
+                }
+            }
+        };
+        
+        function initializeChart() {
+            const chartCanvas = document.getElementById('implementationPhaseChart');
+            if (chartCanvas && !chartCanvas.chart) {
+                 chartCanvas.chart = new Chart(chartCanvas, chartConfig);
+            }
+        }
+
+        if (document.getElementById('implementationPlan').classList.contains('active')) {
+            initializeChart();
+        }
+
+        tabButtons.forEach(button => {
+            if (button.dataset.tab === 'implementationPlan') {
+                button.addEventListener('click', () => {
+                    setTimeout(initializeChart, 0); 
+                });
+            }
+        });
+
+        // Gemini API Integration for Task Elaboration
+        const elaborateButtons = document.querySelectorAll('.gemini-elaborate-btn');
+        elaborateButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const taskListItem = button.closest('li');
+                const taskText = taskListItem.childNodes[0].nodeValue.trim(); // Get text content of the li, excluding button
+                const responseDiv = taskListItem.querySelector('.gemini-response');
+
+                if (!taskText || !responseDiv) return;
+
+                responseDiv.classList.remove('hidden');
+                responseDiv.innerHTML = '<div class="loading-spinner"></div> Elaborating...';
+                button.disabled = true;
+
+                const prompt = `Please elaborate on the following project task: "${taskText}". Describe potential sub-steps, key considerations, or common challenges associated with this task. Keep the response concise and focused, suitable for a project plan overview.`;
+                
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API request failed with status ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const generatedText = result.candidates[0].content.parts[0].text;
+                        responseDiv.innerHTML = generatedText.replace(/\n/g, '<br>'); // Basic formatting
+                    } else {
+                        responseDiv.textContent = 'No elaboration available or unexpected response format.';
+                         console.error('Unexpected Gemini API response structure:', result);
+                    }
+                } catch (error) {
+                    console.error('Error calling Gemini API:', error);
+                    responseDiv.textContent = 'Error elaborating task. Please try again later.';
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
